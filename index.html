@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WildTrace — Full Prototype</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f4f7f5;--card:#fff;--text:#17231d;--muted:#718078;--green:#1f6b4f;--green2:#dfeee6;--border:#dce5df;--red:#a43d3d;--yellow:#98741e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:560px;margin:auto;padding:16px 15px 88px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.logo{font-size:25px;font-weight:850;letter-spacing:-.6px}.logo span{color:var(--green)}.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--green2);color:var(--green);font-weight:800}
+h1{font-size:29px;line-height:1.05;margin:10px 0 6px}.sub{font-size:14px;color:var(--muted);line-height:1.45;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 5px 20px rgba(20,50,35,.04)}
+.card h2{font-size:18px;margin:0 0 12px}.upload{min-height:230px;border:2px dashed #b9cec0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;background:#fbfdfb}.upload img{width:100%;height:230px;object-fit:cover;display:none}.icon{font-size:42px;margin-bottom:8px}
+button{border:0;border-radius:12px;padding:13px 15px;font-weight:750;font-size:15px;cursor:pointer}.primary{width:100%;margin-top:12px;background:var(--green);color:white}.secondary{background:var(--green2);color:var(--green)}.danger{background:#f5e4e4;color:var(--red)}button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px}.row>*{flex:1}.hidden{display:none!important}
+.loading{display:none;text-align:center;color:var(--green);font-weight:700;padding:12px 0}.bar{height:8px;background:#e8eee9;border-radius:99px;overflow:hidden;margin:10px 0}.bar span{display:block;height:100%;width:0;background:var(--green);transition:width .3s}.small{font-size:12px;color:var(--muted)}
+.result{display:none}.confidence{font-size:13px;color:var(--green);font-weight:800}.species{font-size:24px;margin:4px 0}.badge{display:inline-block;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:750;margin-top:4px}.red{background:#f5e4e4;color:var(--red)}.yellow{background:#f7efd4;color:var(--yellow)}.green{background:var(--green2);color:var(--green)}
+.info{font-size:14px;line-height:1.55;color:#44534b;margin:12px 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}.meta div{padding:11px;border-radius:12px;background:#f6f9f7}.meta small{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}.meta strong{font-size:13px;word-break:break-word}
+#map{height:280px;border-radius:15px;overflow:hidden}.note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:10px}
+.report{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--border)}.report:last-child{border-bottom:0}.thumb{width:54px;height:54px;border-radius:13px;background:var(--green2);display:flex;align-items:center;justify-content:center;font-size:26px;flex:none}.report h3{font-size:14px;margin:0 0 4px}.report p{font-size:12px;color:var(--muted);margin:0}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f6f9f7;padding:14px;border-radius:14px}.stat b{display:block;font-size:25px}.stat span{font-size:12px;color:var(--muted)}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;justify-content:center;gap:25px;padding:9px 8px;z-index:20}.nav button{background:transparent;color:var(--muted);padding:5px 10px;font-size:11px}.nav button.active{color:var(--green)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;justify-content:center;z-index:50}.modalbox{background:white;border-radius:22px 22px 0 0;padding:20px;width:100%;max-width:560px;max-height:85vh;overflow:auto}.close{float:right;background:#eef3ef;color:var(--text);padding:8px 11px}.formrow{margin:12px 0}.formrow label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.formrow input,.formrow textarea,.formrow select{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;font:inherit}.toast{position:fixed;left:50%;bottom:75px;transform:translateX(-50%);background:#17231d;color:white;padding:11px 15px;border-radius:12px;font-size:13px;z-index:80;display:none}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="logo">Wild<span>Trace</span></div><div class="avatar" id="avatar">T</div></header>
+
+<section id="home">
+<h1>Quan sát. Ghi nhận. Bảo tồn.</h1>
+<div class="sub">Một nền tảng thử nghiệm kết hợp AI, bản đồ và dữ liệu cộng đồng để hỗ trợ theo dõi động vật hoang dã.</div>
+
+<div class="card">
+<h2>📸 Nhận diện động vật</h2>
+<div class="upload" id="uploadBox">
+<div class="icon">📷</div><strong>Chụp hoặc chọn ảnh động vật</strong>
+<div class="small" style="margin-top:7px">AI sẽ phân tích ảnh trực tiếp trong trình duyệt.</div>
+<input id="photoInput" type="file" accept="image/*" capture="environment" style="margin-top:14px">
+<img id="preview">
+</div>
+<button class="primary" id="analyzeBtn" disabled>🤖 Nhận diện bằng AI</button>
+<div class="loading" id="loading">Đang chuẩn bị AI...<div class="bar"><span id="bar"></span></div><div id="status" class="small"></div></div>
+</div>
+
+<div class="card result" id="result">
+<div class="confidence" id="confidence"></div>
+<div class="species" id="species"></div>
+<span class="badge" id="conservation"></span>
+<div class="info" id="description"></div>
+<div class="meta">
+<div><small>📍 Vị trí</small><strong id="location">Đang lấy vị trí...</strong></div>
+<div><small>🕒 Thời gian</small><strong id="time"></strong></div>
+</div>
+<div class="row" style="margin-top:12px">
+<button class="secondary" id="saveBtn">📍 Gửi ghi nhận</button>
+<button class="danger" id="deadBtn">⚠️ Báo cá thể chết</button>
+</div>
+</div>
+
+<div class="card">
+<h2>🗺️ Bản đồ ghi nhận</h2>
+<div id="map"></div>
+<div class="note">Các điểm màu xanh là ghi nhận cộng đồng. Bản demo lưu dữ liệu trên thiết bị bằng localStorage.</div>
+</div>
+
+<div class="card">
+<h2>📊 Tổng quan dữ liệu</h2>
+<div class="statgrid">
+<div class="stat"><b id="totalReports">0</b><span>Ghi nhận</span></div>
+<div class="stat"><b id="rareReports">0</b><span>Ghi nhận cần chú ý</span></div>
+<div class="stat"><b id="deadReports">0</b><span>Báo cáo cá thể chết</span></div>
+<div class="stat"><b id="speciesCount">0</b><span>Loài khác nhau</span></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🧾 Ghi nhận gần đây</h2>
+<div id="reportList"><div class="note">Chưa có ghi nhận nào. Hãy thử nhận diện một bức ảnh.</div></div>
+</div>
+</section>
+
+<section id="discover" class="hidden">
+<div class="card"><h2>📚 Tra cứu loài</h2><input id="searchSpecies" placeholder="Tìm tên loài..." style="width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font:inherit"></div>
+<div class="card" id="speciesList"></div>
+</section>
+
+<section id="profilePage" class="hidden">
+<div class="card">
+<h2>👤 Hồ sơ người dùng</h2>
+<div class="formrow"><label>Nickname</label><input id="nickname" placeholder="Ví dụ: RừngXanh_27"></div>
+<div class="formrow"><label>Số điện thoại (prototype)</label><input id="phone" placeholder="Chỉ dùng mô phỏng đăng nhập"></div>
+<button class="primary" id="saveProfile">Lưu hồ sơ</button>
+<p class="note">Trong phiên bản thật, số điện thoại sẽ dùng OTP. Không công khai số điện thoại trên bản đồ.</p>
+</div>
+<div class="card"><h2>🔐 Quyền riêng tư</h2><p class="info">Dữ liệu công khai chỉ hiển thị nickname, ảnh, loài, thời gian và vị trí theo mức được phép. Thông tin tài khoản phải được bảo vệ và chỉ xử lý theo quy định pháp luật.</p></div>
+</section>
+</div>
+
+<nav class="nav">
+<button class="active" data-tab="home">🏠<br>Trang chủ</button>
+<button data-tab="discover">🔎<br>Tra cứu</button>
+<button data-tab="profilePage">👤<br>Tài khoản</button>
+</nav>
+
+<div class="modal hidden" id="reportModal">
+<div class="modalbox">
+<button class="close" id="closeModal">✕</button>
+<h2 id="modalTitle">Báo cáo</h2>
+<p class="info" id="modalText"></p>
+<div class="formrow"><label>Ghi chú bổ sung</label><textarea id="reportNote" rows="4" placeholder="Ví dụ: phát hiện bên đường, có dấu hiệu bị thương..."></textarea></div>
+<button class="primary" id="confirmReport">Gửi báo cáo</button>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+env.allowLocalModels=false;
+
+const $=id=>document.getElementById(id);
+const labels=[
+"a red-shanked douc langur","a snub-nosed monkey","a slow loris","a pangolin",
+"a deer","a monkey","a wild boar","a civet","a squirrel","a bird","a snake",
+"a turtle","a frog","a lizard","a cat","a dog","an insect","an unknown animal"
+];
+const speciesData={
+"a red-shanked douc langur":{name:"Voọc chà vá chân nâu",status:"Loài nguy cấp / cần ưu tiên xác minh",class:"red",rare:true,desc:"Một loài linh trưởng quý hiếm. Nếu ghi nhận ngoài tự nhiên, nên giữ khoảng cách và để chuyên gia xác minh."},
+"a snub-nosed monkey":{name:"Voọc mũi hếch",status:"Loài quý hiếm / cần xác minh",class:"red",rare:true,desc:"Một loài linh trưởng quý hiếm. Kết quả AI chỉ là gợi ý, cần chuyên gia xác minh."},
+"a slow loris":{name:"Cu li",status:"Động vật hoang dã cần bảo vệ",class:"red",rare:true,desc:"Không nên bắt giữ hoặc nuôi nhốt. Nếu gặp ngoài tự nhiên, hãy quan sát từ xa."},
+"a pangolin":{name:"Tê tê",status:"Loài bị đe dọa nghiêm trọng",class:"red",rare:true,desc:"Tê tê chịu áp lực lớn từ săn bắt và buôn bán trái phép. Không tiếp cận hoặc bắt giữ."},
+"a deer":{name:"Hươu / Nai",status:"Cần xác định loài cụ thể",class:"yellow",rare:false,desc:"Kết quả AI chưa đủ để xác định chính xác loài và tình trạng bảo tồn."},
+"a monkey":{name:"Khỉ",status:"Cần xác định loài cụ thể",class:"yellow",rare:false,desc:"Nhiều loài khỉ có hình thái tương tự; cần xác minh loài cụ thể."},
+"a wild boar":{name:"Lợn rừng",status:"Động vật hoang dã",class:"green",rare:false,desc:"Cần xác minh bối cảnh và địa điểm ghi nhận."},
+"a civet":{name:"Cầy",status:"Cần xác định loài cụ thể",class:"yellow",rare:false,desc:"Các loài cầy có thể khó phân biệt chỉ bằng một ảnh."},
+"a squirrel":{name:"Sóc",status:"Cần xác định loài cụ thể",class:"green",rare:false,desc:"Cần ảnh rõ hơn để xác định loài."},
+"a bird":{name:"Chim — chưa xác định loài",status:"Cần chuyên gia xác minh",class:"yellow",rare:false,desc:"Một ảnh tổng quát chưa đủ để xác định chính xác loài chim."},
+"a snake":{name:"Rắn — chưa xác định loài",status:"Cần chuyên gia xác minh",class:"yellow",rare:false,desc:"Không nên tiếp cận. Hãy giữ khoảng cách và chụp ảnh an toàn."},
+"a turtle":{name:"Rùa — chưa xác định loài",status:"Cần xác minh",class:"yellow",rare:false,desc:"Cần thêm đặc điểm mai, đầu và chân để xác định loài."},
+"a frog":{name:"Ếch — chưa xác định loài",status:"Cần xác minh",class:"yellow",rare:false,desc:"Cần ảnh cận cảnh và dữ liệu bổ sung."},
+"a lizard":{name:"Thằn lằn — chưa xác định loài",status:"Cần xác minh",class:"yellow",rare:false,desc:"Cần xác định loài cụ thể."},
+"a cat":{name:"Mèo",status:"Có thể là động vật nuôi",class:"green",rare:false,desc:"AI có thể nhầm giữa động vật nuôi và động vật hoang dã."},
+"a dog":{name:"Chó",status:"Có thể là động vật nuôi",class:"green",rare:false,desc:"AI có thể nhầm giữa động vật nuôi và động vật hoang dã."},
+"an insect":{name:"Côn trùng — chưa xác định loài",status:"Cần ảnh cận cảnh",class:"yellow",rare:false,desc:"Cần ảnh rõ hơn và mô hình chuyên biệt."},
+"an unknown animal":{name:"Chưa xác định",status:"Không đủ dữ liệu",class:"yellow",rare:false,desc:"AI chưa đủ chắc chắn. Hãy thử ảnh rõ hơn hoặc gửi để chuyên gia xác minh."}
+};
+let classifier=null,current=null,currentLocation=null;
+let reports=JSON.parse(localStorage.getItem("wildtrace_reports")||"[]");
+let profile=JSON.parse(localStorage.getItem("wildtrace_profile")||'{"nickname":"Tí","phone":""}');
+$("nickname").value=profile.nickname||"Tí";$("phone").value=profile.phone||"";$("avatar").textContent=(profile.nickname||"T")[0].toUpperCase();
+
+const map=L.map("map").setView([21.82,105.21],7);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+let markers=[];
+function renderMap(){
+ markers.forEach(m=>map.removeLayer(m));markers=[];
+ reports.forEach(r=>{
+   if(!r.lat||!r.lng)return;
+   const marker=L.marker([r.lat,r.lng]).addTo(map);
+   marker.bindPopup(`<b>${r.species}</b><br>${r.nickname}<br>${r.time}<br>${r.type==="dead"?"⚠️ Báo cáo cá thể chết":"📍 Ghi nhận"}`);
+   markers.push(marker);
+ });
+}
+function updateStats(){
+ $("totalReports").textContent=reports.length;
+ $("rareReports").textContent=reports.filter(r=>r.rare).length;
+ $("deadReports").textContent=reports.filter(r=>r.type==="dead").length;
+ $("speciesCount").textContent=new Set(reports.map(r=>r.species)).size;
+}
+function renderReports(){
+ if(!reports.length){$("reportList").innerHTML='<div class="note">Chưa có ghi nhận nào. Hãy thử nhận diện một bức ảnh.</div>';return}
+ $("reportList").innerHTML=reports.slice().reverse().slice(0,10).map(r=>`
+ <div class="report"><div class="thumb">${r.type==="dead"?"⚠️":"🐾"}</div>
+ <div><h3>${r.species} ${r.type==="dead"?"— BÁO CÁO CHẾT":""}</h3>
+ <p>${r.nickname} • ${r.time}</p><p>${r.note||"Không có ghi chú"}</p></div></div>`).join("");
+}
+function renderSpecies(){
+ const q=($("searchSpecies").value||"").toLowerCase();
+ const arr=Object.values(speciesData).filter(x=>x.name.toLowerCase().includes(q));
+ $("speciesList").innerHTML=arr.map(x=>`<div class="report"><div class="thumb">🐾</div><div><h3>${x.name}</h3><p>${x.status}</p><p>${x.desc}</p></div></div>`).join("");
+}
+renderMap();updateStats();renderReports();renderSpecies();
+$("searchSpecies").addEventListener("input",renderSpecies);
+
+$("photoInput").addEventListener("change",e=>{
+ const file=e.target.files[0];if(!file)return;
+ $("preview").src=URL.createObjectURL(file);$("preview").style.display="block";
+ document.querySelector(".icon").style.display="none";
+ document.querySelector("#uploadBox strong").style.display="none";
+ document.querySelector("#uploadBox .small").style.display="none";
+ $("analyzeBtn").disabled=false;$("result").style.display="none";
+});
+async function getModel(){
+ if(classifier)return classifier;
+ $("status").textContent="Đang tải mô hình AI lần đầu...";
+ $("bar").style.width="20%";
+ classifier=await pipeline("zero-shot-image-classification","Xenova/clip-vit-base-patch32",{progress_callback:p=>{if(p.progress)$("bar").style.width=Math.min(95,Math.max(20,p.progress))+"%"}});
+ return classifier;
+}
+$("analyzeBtn").addEventListener("click",async()=>{
+ const file=$("photoInput").files[0];if(!file)return;
+ $("analyzeBtn").disabled=true;$("loading").style.display="block";$("result").style.display="none";
+ try{
+  const model=await getModel();$("status").textContent="Đang phân tích ảnh...";
+  const out=await model(URL.createObjectURL(file),labels,{topk:5});current=out[0];
+  const d=speciesData[current.label]||speciesData["an unknown animal"];
+  $("confidence").textContent=`AI ANALYSIS • ${(current.score*100).toFixed(1)}% CONFIDENCE`;
+  $("species").textContent=d.name;$("conservation").textContent="⚠️ "+d.status;$("conservation").className="badge "+d.class;
+  $("description").textContent=d.desc;$("time").textContent=new Date().toLocaleString("vi-VN");
+  $("location").textContent="Đang lấy vị trí...";
+  $("result").style.display="block";
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{currentLocation={lat:p.coords.latitude,lng:p.coords.longitude};$("location").textContent=`${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`},()=>{$("location").textContent="Chưa cấp quyền vị trí"});
+  else $("location").textContent="Không hỗ trợ";
+ }catch(e){alert("Không chạy được AI: "+e.message);console.error(e)}
+ finally{$("loading").style.display="none";$("analyzeBtn").disabled=false;$("analyzeBtn").textContent="🔁 Nhận diện lại"}
+});
+function openModal(type){
+ if(!current)return;
+ $("modalTitle").textContent=type==="dead"?"⚠️ Báo cáo cá thể chết":"📍 Gửi ghi nhận";
+ $("modalText").textContent=`Loài được AI nhận diện: ${speciesData[current.label]?.name||"Chưa xác định"}. Kết quả AI chỉ là gợi ý và có thể cần chuyên gia xác minh.`;
+ $("reportModal").dataset.type=type;$("reportModal").classList.remove("hidden");
+}
+$("saveBtn").onclick=()=>openModal("sighting");$("deadBtn").onclick=()=>openModal("dead");
+$("closeModal").onclick=()=>$("reportModal").classList.add("hidden");
+$("confirmReport").onclick=()=>{
+ if(!current)return;
+ const d=speciesData[current.label]||speciesData["an unknown animal"];
+ const r={id:Date.now(),species:d.name,rare:d.rare,type:$("reportModal").dataset.type,nickname:profile.nickname||"Người dùng",lat:currentLocation?.lat||null,lng:currentLocation?.lng||null,time:new Date().toLocaleString("vi-VN"),note:$("reportNote").value};
+ reports.push(r);localStorage.setItem("wildtrace_reports",JSON.stringify(reports));$("reportNote").value="";$("reportModal").classList.add("hidden");renderMap();updateStats();renderReports();toast("Đã lưu ghi nhận trên thiết bị.");
+};
+$("saveProfile").onclick=()=>{profile={nickname:$("nickname").value.trim()||"Người dùng",phone:$("phone").value.trim()};localStorage.setItem("wildtrace_profile",JSON.stringify(profile));$("avatar").textContent=profile.nickname[0].toUpperCase();toast("Đã lưu hồ sơ.");};
+function toast(t){$("toast").textContent=t;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",2200)}
+document.querySelectorAll(".nav button").forEach(btn=>btn.onclick=()=>{
+ document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");
+ ["home","discover","profilePage"].forEach(id=>$(id).classList.toggle("hidden",id!==btn.dataset.tab));
+ if(btn.dataset.tab==="home")setTimeout(()=>map.invalidateSize(),100);
+});
+</script>
+</body>
+</html>
